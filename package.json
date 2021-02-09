@@ -1,0 +1,15 @@
+{
+  "name": "@koopjs/provider-snowflake",
+  "version": "1.0.0",
+  "description": "Koop provider for accessing Snowflake data with SQL Select",
+  "main": "index.js",
+  "author": "Phil Dougherty",
+  "license": "Apache-2.0",
+  "devDependencies": {},
+  "dependencies": {
+    "@koopjs/logger": "^2.0.4",
+    "koop": "^3.10.1",
+    "snowflake-sdk": "^1.5.3",
+    "@turf/turf": "^6.3.0"
+  }
+}
