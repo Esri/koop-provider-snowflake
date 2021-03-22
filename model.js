@@ -90,12 +90,14 @@ Model.prototype.getData = async function (req, callback) {
         return callback(err)
     }
     if (req.path.endsWith('query')){
-        let n = req.params.layer
-        if(n !== null){
-            let sd = serviceDefs[parseInt(n)]
+        let name = req.params.id
+        let idx = req.params.layer
+        if(idx !== null && name !== null){
+            let sd = serviceDefs.get(name)
             let wkt = requestToSpatialFilter(req);
             let where = requestToWhereClause(req);
-            snowflake.query(sd.tableName,sd.selectFields,sd.geometryField,wkt,where).then((result)=>{
+            snowflake.query(sd[idx].tableName,sd[idx].selectFields,sd[idx].geographyField,
+                            wkt,where,sd[idx].maxReturnCount).then((result)=>{
                 let data = {
                     type: 'FeatureCollection',
                     features: result,
