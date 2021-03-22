@@ -4,17 +4,18 @@
         "snowflakeWarehouse":"",
         "snowflakeUser":"",
         "snowflakePassword":"",
-        "serviceDefinitions":[
-            {
+        "serviceDefinitions":{
+            "locations": [
+                {
                 "serviceIndex":0,
-                "serviceName":"locations",
                 "serviceDesc":"Sample location data",
                 "tableName":"DEMO.PUBLIC.LOCATIONS",
-                "geometryField":"SHAPE",
+                "geographyField":"SHAPE",
                 "selectFields":"ID,LOB,CONSTTYPE,YEARBUILT,LATITUDE,LONGITUDE",
-                "maxReturnCount":5000,
+                "maxReturnCount":1,
                 "geometryType":"esriGeometryPoint"
-            }
-        ]
+                }
+            ]
+        }
     }
 }
