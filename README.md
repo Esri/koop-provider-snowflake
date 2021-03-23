@@ -82,4 +82,4 @@ A dev server will be running at `http://localhost:8080`. By default, it will use
 
 ## License
 
-MIT
+[Apache License 2.0](https://github.com/EsriPS/koop-provider-snowflake/blob/main/License.txt)
