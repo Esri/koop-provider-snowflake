@@ -126,7 +126,9 @@ Model.prototype.getData = async function (req, callback) {
                 return callback(null,data)
                 
             },(error)=>{
-                return callback(error)
+                let jsonError = new Error ("Unable to execute SQL Query: " + error);
+                jsonError.code = 400;
+                return callback(jsonError);
             });
         }
     }
