@@ -15,6 +15,7 @@
 
 const config = require('config');
 const snowflake = require('./lib/snowflake-client');
+const turf = require('@turf/turf');
 const serviceDefs = config.koopProviderSnowflake.serviceDefinitions
 
 var isConnectionAlive = false;
@@ -52,7 +53,7 @@ function polygonToWkt(geoJson){
     return wkt;
 }
 function projectGeoJsonGeometry(geoJson){
-    return Turf.toWgs84(geoJson);
+    return turf.toWgs84(geoJson);
 
 }
 function esriGeometryToGeoJson(geometry,type){
@@ -64,13 +65,13 @@ function esriGeometryToGeoJson(geometry,type){
             let ymax = geometry.ymax;
             let ymin = geometry.ymin;
             
-            return Turf.polygon([[[xmax, ymin], [xmax, ymax], [xmin, ymax], [xmin, ymin], [xmax, ymin]]]);
+            return turf.polygon([[[xmax, ymin], [xmax, ymax], [xmin, ymax], [xmin, ymin], [xmax, ymin]]]);
     }
 
 }
 function requestToSpatialFilter(req) {
     if (typeof req.query.geometry !== 'undefined') {
-        let reqGeometry = JSON.parse(req.query.geometry);
+        let reqGeometry = req.query.geometry;
         var geoJson = esriGeometryToGeoJson(reqGeometry,req.query.geometryType);
         if(req.query.inSR == "102100"){
             let projected = projectGeoJsonGeometry(geoJson);
@@ -118,8 +119,8 @@ Model.prototype.getData = async function (req, callback) {
                     features: result,
                     metadata: {
                         idField:'ID',
-                        maxRecordCount:sd.max_return_count,
-                        limitExceeded: true
+                        maxRecordCount:sd[idx].max_return_count,
+                        limitExceeded: false
                     }
                 }
 
@@ -131,6 +132,78 @@ Model.prototype.getData = async function (req, callback) {
                 return callback(jsonError);
             });
         }
+    }
+    else {
+        let name = req.params.id
+        let idx = req.params.layer
+        if(idx !== null && name !== null){
+            let sd = serviceDefs.get(name)
+            let data = {
+                type: 'FeatureCollection',
+                features: [],
+                metadata: {
+                    idField:'ID',
+                    name:'Sample Locations',
+                    maxRecordCount:sd[idx].max_return_count,
+                    limitExceeded: false,
+                    geometryType:sd[idx].geometryType,
+                    renderer: {
+                        type: "simple",
+                        symbol: {
+                            type: "esriSMS",
+                            style: "esriSMSCircle",
+                            color: [133, 145, 58, 255],
+                            size: 4,
+                            angle: 0,
+                            xoffset: 0,
+                            yoffset: 0,
+                            outline: {
+                                color: [0, 0, 0, 255],
+                                width: 0.7
+                            }
+                        }
+                    },
+                    fields: [
+                        { 
+                            name: 'ID',
+                            type: 'Integer', 
+                            alias: 'ID'
+                        },
+                        { 
+                            name: 'LOB',
+                            type: 'String', 
+                            alias: 'LOB'
+                        },
+                        { 
+                            name: 'CONSTTYPE',
+                            type: 'String', 
+                            alias: 'CONSTTYPE'
+                        },
+                        { 
+                            name: 'YEARBUILT',
+                            type: 'String', 
+                            alias: 'YEARBUILT'
+                        },
+                        { 
+                            name: 'LATITUDE',
+                            type: 'Double', 
+                            alias: 'LATITUDE'
+                        },
+                        { 
+                            name: 'LONGITUDE',
+                            type: 'Double', 
+                            alias: 'LONGITUDE'
+                        }
+                    ]
+                },
+                capabilities: {
+                    quantization: false
+                }
+            }
+
+            return callback(null,data)
+        }
+        
     }
 }
 
