@@ -94,6 +94,48 @@ function requestToWhereClause(req){
     }
 }
 
+function requestToLayerInfo(req){
+    let name = req.params.id
+    let idx = req.params.layer
+    if(idx !== null && name !== null){
+        let sd = serviceDefs.get(name)
+        let data = {
+            type: 'FeatureCollection',
+            features: [],
+            metadata: {
+                idField:'ID',
+                name:sd[idx].serviceDesc,
+                maxRecordCount:sd[idx].max_return_count,
+                limitExceeded: false,
+                geometryType:sd[idx].geometryType,
+                renderer: {
+                    type: "simple",
+                    symbol: {
+                        type: "esriSMS",
+                        style: "esriSMSCircle",
+                        color: [133, 145, 58, 255],
+                        size: 4,
+                        angle: 0,
+                        xoffset: 0,
+                        yoffset: 0,
+                        outline: {
+                            color: [0, 0, 0, 255],
+                            width: 0.7
+                        }
+                    }
+                },
+                fields: sd[idx].fields
+            },
+            capabilities: {
+                quantization: false
+            }
+        }
+
+        return data;
+    }
+
+}
+
 /**
  * Fetch data from Snowflake. Pass result or error to callback.
  * @param {object} req express request object
@@ -112,7 +154,8 @@ Model.prototype.getData = async function (req, callback) {
             let sd = serviceDefs.get(name)
             let wkt = requestToSpatialFilter(req);
             let where = requestToWhereClause(req);
-            snowflake.query(sd[idx].tableName,sd[idx].selectFields,sd[idx].geographyField,
+            let selectFields = sd[idx].fields.map((item) => { return item.name }).join(',')
+            snowflake.query(sd[idx].tableName,selectFields,sd[idx].geographyField,
                             wkt,where,sd[idx].maxReturnCount).then((result)=>{
                 let data = {
                     type: 'FeatureCollection',
@@ -132,6 +175,14 @@ Model.prototype.getData = async function (req, callback) {
                 return callback(jsonError);
             });
         }
+    }
+    else if (req.path.match(/\d+$/)){
+        callback(null,requestToLayerInfo(req));
+    }
+    else {
+        let err = new Error("Not implemented");
+        err.code = 404;
+        callback(err);
     }
 }
 

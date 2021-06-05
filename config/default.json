@@ -11,8 +11,39 @@
                 "serviceDesc":"Sample location data",
                 "tableName":"DEMO.PUBLIC.LOCATIONS",
                 "geographyField":"SHAPE",
-                "selectFields":"ID,LOB,CONSTTYPE,YEARBUILT,LATITUDE,LONGITUDE",
-                "maxReturnCount":1,
+                "fields":[
+                    { 
+                        "name": "ID",
+                        "type": "Integer", 
+                        "alias": "ID"
+                    },
+                    { 
+                        "name": "LOB",
+                        "type": "String", 
+                        "alias": "LOB"
+                    },
+                    { 
+                        "name": "CONSTTYPE",
+                        "type": "String", 
+                        "alias": "CONSTYPE"
+                    },
+                    { 
+                        "name": "YEARBUILT",
+                        "type": "String",
+                        "alias": "YEARBUILT"
+                    },
+                    { 
+                        "name": "LATITUDE",
+                        "type": "Double", 
+                        "alias": "LATITUDE"
+                    },
+                    { 
+                        "name": "LONGITUDE",
+                        "type": "Double", 
+                        "alias": "LONGITUDE"
+                    }
+                ],
+                "maxReturnCount":1000,
                 "geometryType":"esriGeometryPoint"
                 }
             ]
