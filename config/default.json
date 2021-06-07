@@ -1,9 +1,9 @@
 {
     "koopProviderSnowflake":{
-        "snowflakeAccount":"",
-        "snowflakeWarehouse":"",
-        "snowflakeUser":"",
-        "snowflakePassword":"",
+        "snowflakeAccount":"esriorg_ps_account",
+        "snowflakeWarehouse":"DEMO",
+        "snowflakeUser":"MARK_LOU",
+        "snowflakePassword":"Zik@Boi$EsriGIS69",
         "serviceDefinitions":{
             "locations": [
                 {
@@ -12,8 +12,9 @@
                 "tableName":"DEMO.PUBLIC.LOCATIONS",
                 "geographyField":"SHAPE",
                 "selectFields":"ID,LOB,CONSTTYPE,YEARBUILT,LATITUDE,LONGITUDE",
-                "maxReturnCount":1,
-                "geometryType":"esriGeometryPoint"
+                "maxReturnCount":10,
+                "geometryType":"esriGeometryPoint",
+                "primaryId": "ID"
                 }
             ]
         }

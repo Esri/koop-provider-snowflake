@@ -85,8 +85,8 @@ function requestToSpatialFilter(req) {
     }
 }
 function requestToWhereClause(req){
-    if (typeof req.query.where !== 'undefined' && req.query.where !== '') {
-        return req.query.where;
+    if (typeof req.query.wheres !== 'undefined' && req.query.wheres !== '') {
+        return req.query.wheres;
     }
     else{
         return '';
@@ -104,15 +104,50 @@ Model.prototype.getData = async function (req, callback) {
         let err = new Error(JSON.stringify({code:503,message:"Service unavailable"}))
         return callback(err)
     }
+``
+    // console.log(JSON.stringify(req.query));
+    // console.log(JSON.stringify(req.params));
+
     if (req.path.endsWith('query')){
-        let name = req.params.id
-        let idx = req.params.layer
+        let name = req.params.id;
+        let idx = req.params.layer;
+
+        let isCountOnly = req.query.returnCountOnly;
+        let supportsPagination = req.query.supportsPagination;
+        let offset = req.query.resultOffset
+
         if(idx !== null && name !== null){
             let sd = serviceDefs.get(name)
             let wkt = requestToSpatialFilter(req);
             let where = requestToWhereClause(req);
-            snowflake.query(sd[idx].tableName,sd[idx].selectFields,sd[idx].geographyField,
-                            wkt,where,sd[idx].maxReturnCount).then((result)=>{
+
+            
+            let snowflake_stmt;
+
+            if (isCountOnly) {
+                snowflake_stmt = snowflake.count({"tableName": sd[idx].tableName, 
+                                                  "spatialFilter": wkt,
+                                                  "geographyField": sd[idx].geographyField, 
+                                                  "whereClause": where
+                                                });
+            } 
+            else {
+                snowflake_stmt = snowflake.query({"tableName": sd[idx].tableName, 
+                                                  "select": sd[idx].selectFields,
+                                                  "geographyField": sd[idx].geographyField, 
+                                                  "spatialFilter":wkt, 
+                                                  "whereClause": where, 
+                                                  "maxRows": sd[idx].maxReturnCount,
+                                                  "supportsPagination": supportsPagination,
+                                                  "primaryId": sd[idx].primaryId, 
+                                                  "offset": offset
+                                                });
+            }
+
+            snowflake_stmt.then((result)=>{
+
+                // console.log(JSON.stringify(result));
+
                 let data = {
                     type: 'FeatureCollection',
                     features: result,
@@ -122,7 +157,7 @@ Model.prototype.getData = async function (req, callback) {
                         limitExceeded: true
                     }
                 }
-
+                // console.log(JSON.stringify(data));
                 return callback(null,data)
                 
             },(error)=>{
