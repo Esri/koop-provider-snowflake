@@ -24,8 +24,12 @@ const koop = new Koop()
 
 koop.register(require('./index'), {after: (request, geojson, callback) => {
     geojson.filtersApplied = {
-        'all':true
+        'offset': true,
+        'limit' : true,
+        'where': true,
+        'geometry': true
     };
+
     callback(null, geojson)}})
 
     
