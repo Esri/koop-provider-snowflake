@@ -23,8 +23,12 @@ const koop = new Koop()
 
 
 koop.register(require('./index'), {after: (request, geojson, callback) => {
-    console.log(JSON.stringify(geojson));
+    geojson.filtersApplied = {
+        'all':true
+    };
     callback(null, geojson)}})
+
+    
 koop.server.listen(8080, () => console.log(`Koop listening on port 8080!`))
 
 

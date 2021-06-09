@@ -15,6 +15,7 @@
 
 const config = require('config');
 const snowflake = require('./lib/snowflake-client');
+const turf = require('@turf/turf');
 const serviceDefs = config.koopProviderSnowflake.serviceDefinitions
 
 var isConnectionAlive = false;
@@ -31,7 +32,7 @@ function Model () {
                         console.log('Successfully connected to Snowflake with connection id ' + result);
                         isConnectionAlive = true;
                     },(error)=>{
-                        console.log(error.message)
+                        console.log(error.message);
                         isConnectionAlive = false;
                     });;
 }
@@ -52,7 +53,7 @@ function polygonToWkt(geoJson){
     return wkt;
 }
 function projectGeoJsonGeometry(geoJson){
-    return Turf.toWgs84(geoJson);
+    return turf.toWgs84(geoJson);
 
 }
 function esriGeometryToGeoJson(geometry,type){
@@ -64,13 +65,13 @@ function esriGeometryToGeoJson(geometry,type){
             let ymax = geometry.ymax;
             let ymin = geometry.ymin;
             
-            return Turf.polygon([[[xmax, ymin], [xmax, ymax], [xmin, ymax], [xmin, ymin], [xmax, ymin]]]);
+            return turf.polygon([[[xmax, ymin], [xmax, ymax], [xmin, ymax], [xmin, ymin], [xmax, ymin]]]);
     }
 
 }
 function requestToSpatialFilter(req) {
     if (typeof req.query.geometry !== 'undefined') {
-        let reqGeometry = JSON.parse(req.query.geometry);
+        let reqGeometry = req.query.geometry;
         var geoJson = esriGeometryToGeoJson(reqGeometry,req.query.geometryType);
         if(req.query.inSR == "102100"){
             let projected = projectGeoJsonGeometry(geoJson);
@@ -85,11 +86,68 @@ function requestToSpatialFilter(req) {
     }
 }
 function requestToWhereClause(req){
-    if (typeof req.query.wheres !== 'undefined' && req.query.wheres !== '') {
-        return req.query.wheres;
+    if (typeof req.query.where !== 'undefined' && req.query.where !== '') {
+        return req.query.where;
     }
     else{
         return '';
+    }
+}
+
+function requestToLayerInfo(req){
+    let name = req.params.id
+    let idx = req.params.layer
+    if(idx !== null && name !== null){
+        let sd = serviceDefs.get(name)
+        let data = {
+            type: 'FeatureCollection',
+            features: [],
+            metadata: {
+                idField:'ID',
+                name:sd[idx].serviceDesc,
+                maxRecordCount:sd[idx].max_return_count,
+                limitExceeded: false,
+                geometryType:sd[idx].geometryType,
+                renderer: {
+                    type: "simple",
+                    symbol: {
+                        type: "esriSMS",
+                        style: "esriSMSCircle",
+                        color: [133, 145, 58, 255],
+                        size: 4,
+                        angle: 0,
+                        xoffset: 0,
+                        yoffset: 0,
+                        outline: {
+                            color: [0, 0, 0, 255],
+                            width: 0.7
+                        }
+                    }
+                },
+                fields: sd[idx].fields
+            },
+            capabilities: {
+                quantization: false
+            }
+        }
+
+        return data;
+    }
+
+}
+// determines whether or not to use the resultRecordCount in the query params or maxRecordCount in the config file
+function getMaxRows(resultRecordCount, supportsPagination, maxRecordCount) {
+    if (resultRecordCount) {
+        if (supportsPagination) {
+            return resultRecordCount;
+        }
+        else {
+            console.log("Warning: resultRecordCount not valid unless supportsPagination is true. Using maxReturnCount specified in the config file");
+            return maxRecordCount;
+        }
+    } 
+    else {
+        return maxRecordCount;
     }
 }
 
@@ -105,26 +163,25 @@ Model.prototype.getData = async function (req, callback) {
         return callback(err)
     }
 ``
-    // console.log(JSON.stringify(req.query));
-    // console.log(JSON.stringify(req.params));
 
     if (req.path.endsWith('query')){
         let name = req.params.id;
         let idx = req.params.layer;
 
-        let isCountOnly = req.query.returnCountOnly;
-        let supportsPagination = req.query.supportsPagination;
+        let returnCountOnly = req.query.returnCountOnly;
         let offset = req.query.resultOffset
+        let resultRecordCount = req.query.resultRecordCount;
 
         if(idx !== null && name !== null){
+
             let sd = serviceDefs.get(name)
             let wkt = requestToSpatialFilter(req);
             let where = requestToWhereClause(req);
-
+            let supportsPagination = sd[idx].supportsPagination;
+            let maxRows = getMaxRows(resultRecordCount, supportsPagination, sd[idx].maxReturnCount);
             
             let snowflake_stmt;
-
-            if (isCountOnly) {
+            if (returnCountOnly) {
                 snowflake_stmt = snowflake.count({"tableName": sd[idx].tableName, 
                                                   "spatialFilter": wkt,
                                                   "geographyField": sd[idx].geographyField, 
@@ -133,11 +190,11 @@ Model.prototype.getData = async function (req, callback) {
             } 
             else {
                 snowflake_stmt = snowflake.query({"tableName": sd[idx].tableName, 
-                                                  "select": sd[idx].selectFields,
+                                                  "select": sd[idx].fields.map((item) => { return item.name }).join(','),
                                                   "geographyField": sd[idx].geographyField, 
                                                   "spatialFilter":wkt, 
                                                   "whereClause": where, 
-                                                  "maxRows": sd[idx].maxReturnCount,
+                                                  "maxRows": maxRows,
                                                   "supportsPagination": supportsPagination,
                                                   "primaryId": sd[idx].primaryId, 
                                                   "offset": offset
@@ -145,19 +202,19 @@ Model.prototype.getData = async function (req, callback) {
             }
 
             snowflake_stmt.then((result)=>{
-
-                // console.log(JSON.stringify(result));
-
                 let data = {
                     type: 'FeatureCollection',
                     features: result,
                     metadata: {
                         idField:'ID',
-                        maxRecordCount:sd.max_return_count,
-                        limitExceeded: true
+                        maxRecordCount:sd[idx].max_return_count,
+                        limitExceeded: false
                     }
                 }
-                // console.log(JSON.stringify(data));
+
+                if (returnCountOnly) {
+                    data.count = result
+                }
                 return callback(null,data)
                 
             },(error)=>{
@@ -166,6 +223,14 @@ Model.prototype.getData = async function (req, callback) {
                 return callback(jsonError);
             });
         }
+    }
+    else if (req.path.match(/\d+$/)){
+        callback(null,requestToLayerInfo(req));
+    }
+    else {
+        let err = new Error("Not implemented");
+        err.code = 404;
+        callback(err);
     }
 }
 
