@@ -208,7 +208,8 @@ Model.prototype.getData = async function (req, callback) {
                     metadata: {
                         idField:'ID',
                         maxRecordCount:sd[idx].max_return_count,
-                        limitExceeded: false
+                        limitExceeded: false,
+                        fields: sd[idx].fields
                     }
                 }
 
