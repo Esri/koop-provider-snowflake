@@ -50,12 +50,33 @@ function polygonToWkt(geoJson){
         wkt = wkt.slice(0, -1);
     }
     wkt +=  "))'";
+    console.log(wkt);
     return wkt;
 }
 function projectGeoJsonGeometry(geoJson){
     return turf.toWgs84(geoJson);
 
 }
+
+
+function isClockwise(coords) {
+    // Calculate the area to determine if the polygon is clockwise or counterclockwise
+    let area = 0;
+    for (let i = 0; i < coords.length; i++) {
+      const [x1, y1] = coords[i];
+      const [x2, y2] = coords[(i + 1) % coords.length];
+  
+      area += x1 * y2 - x2 * y1
+    }
+
+    if ((area / 2) < 0){
+        return true;
+    } else {
+        return false;
+    };
+  }
+
+
 function esriGeometryToGeoJson(geometry,type){
     //@todo - handle other types
     switch (type){
@@ -66,6 +87,18 @@ function esriGeometryToGeoJson(geometry,type){
             let ymin = geometry.ymin;
             
             return turf.polygon([[[xmax, ymin], [xmax, ymax], [xmin, ymax], [xmin, ymin], [xmax, ymin]]]);
+
+        case 'esriGeometryPolygon':
+            let rings = geometry.rings;
+
+            // If the outer loop polygon is clockwise, reverse to make it counterclockwise
+            if (isClockwise(rings[0])) {
+                rings[0] = rings[0].reverse();
+            }
+            return turf.polygon(rings);
+
+        default:
+            return new Error("This Geometry is not yet supported");
     }
 
 }
